@@ -55,9 +55,12 @@ service cloud.firestore {
         && request.resource.data.clinicId is string
         && get(/databases/$(database)/documents/clinics/$(request.resource.data.clinicId)).data.ownerUid == request.auth.uid;
 
-      // Users may rename themselves, or lock their own account as a read-only demo.
+      // Admins may rename themselves, or lock their own account as a read-only demo.
       allow update: if signedIn() && request.auth.uid == uid && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["doctorName"])
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["doctorName"])
+          && resource.data.role == "admin"
+        )
         || (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["role"])
           && resource.data.role == "admin"
@@ -71,7 +74,9 @@ service cloud.firestore {
     match /clinics/{clinicId} {
       allow read: if hasProfile() && myClinic() == clinicId;
 
+      // Only during sign-up: the clinic is created before the user's profile exists.
       allow create: if signedIn()
+        && !exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.keys().hasOnly(["name", "address", "ownerUid"]);
 

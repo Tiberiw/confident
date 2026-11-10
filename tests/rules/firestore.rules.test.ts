@@ -138,6 +138,11 @@ describe("sign-up", () => {
       setDoc(doc(db, "users/bob"), { email: "c@x.com", doctorName: "Carol", clinicId: "kc", role: "admin" }),
     );
   });
+
+  it("only lets users without a profile create a clinic", async () => {
+    await assertFails(setDoc(doc(as("demo"), "clinics/kz"), { name: "Spam", address: "", ownerUid: "demo" }));
+    await assertFails(setDoc(doc(as("alice"), "clinics/kz"), { name: "Second", address: "", ownerUid: "alice" }));
+  });
 });
 
 describe("profiles", () => {
@@ -154,5 +159,9 @@ describe("profiles", () => {
     await assertSucceeds(updateDoc(doc(as("alice"), "users/alice"), { doctorName: "Dr. Alice" }));
     await assertSucceeds(getDoc(doc(as("alice"), "users/alice")));
     await assertFails(getDoc(doc(as("alice"), "users/bob")));
+  });
+
+  it("never lets the demo user rename itself", async () => {
+    await assertFails(updateDoc(doc(as("demo"), "users/demo"), { doctorName: "Hacked" }));
   });
 });
