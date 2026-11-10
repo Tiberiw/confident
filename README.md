@@ -11,7 +11,9 @@ The AI findings support the clinician's diagnosis; they don't replace it.
 
 ## Try it
 
-Live: _link added after the first deploy_
+Live: https://confident-1h3.pages.dev
+
+![A demo case: the X-ray with numbered teeth and AI findings, and the findings list](docs/screenshot.png)
 
 Click **Try the demo** on the sign-in page to open a read-only clinic with fictional patients.
 To try your own X-rays, register a clinic (free). Each clinic only ever sees its own data.
