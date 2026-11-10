@@ -28,11 +28,13 @@ export function countPathologies(d: Detections): number {
   return d.classes.filter((c) => !isTreatment(c)).length;
 }
 
-/** Index into `teeth` of the tooth that overlaps `box` the most, or -1. */
+/** Index into `teeth` of the numbered tooth that overlaps `box` the most, or -1. */
 function bestToothIndex(box: Box, teeth: Detections): number {
   let best = -1;
   let bestIou = MIN_IOU;
   teeth.boxes.forEach((toothBox, i) => {
+    // Unnumbered extra boxes can't carry a finding; skipping them lets it fall to a real tooth.
+    if (teeth.classes[i] === UNNUMBERED_TOOTH) return;
     const v = iou(toothBox, box);
     if (v > bestIou) {
       bestIou = v;

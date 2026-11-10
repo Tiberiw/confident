@@ -56,4 +56,12 @@ describe("unnumbered teeth", () => {
   it("are not given to a finding as its tooth", () => {
     expect(assignTooth([1, 41, 9, 49], withExtra)).toBeNull();
   });
+
+  it("don't hide a finding from its numbered neighbour", () => {
+    // The caries overlaps the extra box most, but also tooth 1.1.
+    const overlapping = { boxes: [[0, 0, 10, 30], [0, 20, 10, 40]] as Box[], scores: [1, 0.3], classes: [7, UNNUMBERED_TOOTH] };
+    const caries = { boxes: [[1, 22, 9, 38]] as Box[], scores: [1], classes: [PATHOLOGY_LABELS.indexOf("Caries")] };
+    expect(toFdi(processFindings(overlapping, caries)).caries).toEqual([1.1]);
+    expect(assignTooth(caries.boxes[0], overlapping)).toBe("1.1");
+  });
 });
