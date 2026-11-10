@@ -11,20 +11,34 @@ export interface RegisterInput {
   doctorName: string;
 }
 
-/** Creates the login, the clinic, and the user profile, in that order (the rules check each step). */
-export async function registerClinic(i: RegisterInput): Promise<void> {
-  const { user } = await createUserWithEmailAndPassword(auth, i.email, i.password);
+export type ClinicSetupInput = Pick<RegisterInput, "clinicName" | "clinicAddress" | "doctorName">;
+
+/** Creates the clinic, then the user's admin profile (the rules check each step). */
+async function createClinicAndProfile(uid: string, email: string, i: ClinicSetupInput): Promise<void> {
   const clinic = await addDoc(collection(db, "clinics"), {
     name: i.clinicName,
     address: i.clinicAddress,
-    ownerUid: user.uid,
+    ownerUid: uid,
   });
-  await setDoc(doc(db, "users", user.uid), {
-    email: i.email,
+  await setDoc(doc(db, "users", uid), {
+    email,
     doctorName: i.doctorName,
     clinicId: clinic.id,
     role: "admin",
   });
+}
+
+/** Creates the login, the clinic, and the user profile, in that order. */
+export async function registerClinic(i: RegisterInput): Promise<void> {
+  const { user } = await createUserWithEmailAndPassword(auth, i.email, i.password);
+  await createClinicAndProfile(user.uid, i.email, i);
+}
+
+/** For a login whose sign-up stopped before its clinic and profile were saved. */
+export async function finishClinicSetup(i: ClinicSetupInput): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not signed in");
+  await createClinicAndProfile(user.uid, user.email ?? "", i);
 }
 
 /** Calls back with the signed-in user's id, or null. Returns the unsubscribe function. */

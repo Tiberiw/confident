@@ -13,6 +13,7 @@ vi.mock("./auth.api", () => ({
   signInDemo: vi.fn(),
   signOutUser: vi.fn(),
   registerClinic: vi.fn(),
+  finishClinicSetup: vi.fn(),
   demoAvailable: vi.fn(() => true),
 }));
 vi.mock("@/lib/firebase", () => ({ db: {}, auth: {}, initAnalytics: vi.fn() }));
@@ -90,3 +91,23 @@ it("blocks registration when the passwords differ", async () => {
   expect(await screen.findByText("Passwords must match")).toBeInTheDocument();
   expect(mocked.registerClinic).not.toHaveBeenCalled();
 });
+
+it("lets a login whose sign-up broke halfway finish creating its clinic", async () => {
+  mocked.subscribeToAuth.mockImplementation((cb) => {
+    cb("u1");
+    return () => {};
+  });
+  mocked.getUserProfile.mockResolvedValue(null);
+  renderAt("/patients");
+  await userEvent.type(await screen.findByLabelText("Clinic name", {}, { timeout: 5000 }), "Smile Dental");
+  await userEvent.type(screen.getByLabelText("Clinic address"), "Str. Lunga 1, Cluj");
+  await userEvent.type(screen.getByLabelText("Your name"), "Dr. Ana Pop");
+  mocked.getUserProfile.mockResolvedValue(profile("admin"));
+  await userEvent.click(screen.getByRole("button", { name: "Create clinic" }));
+  expect(mocked.finishClinicSetup).toHaveBeenCalledWith({
+    clinicName: "Smile Dental",
+    clinicAddress: "Str. Lunga 1, Cluj",
+    doctorName: "Dr. Ana Pop",
+  });
+  expect(await screen.findByText("Dr. Ana Pop")).toBeInTheDocument();
+}, 15000);
