@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+.DS_Store
+.idea/
+.vscode/
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+# Personal task notes (not part of the app)
+task.md

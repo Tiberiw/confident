@@ -1,0 +1,106 @@
+rules_version = '2';
+
+// Every clinic sees only its own data. Demo users can read but never write.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myClinic() {
+      return me().clinicId;
+    }
+
+    function isAdmin() {
+      return me().role == "admin";
+    }
+
+    // Shared rules for clinic-owned collections (patients, cases, xrays).
+    function canRead() {
+      return hasProfile() && resource.data.clinicId == myClinic();
+    }
+
+    function canCreate() {
+      return hasProfile() && isAdmin() && request.resource.data.clinicId == myClinic();
+    }
+
+    function canUpdate() {
+      return hasProfile() && isAdmin()
+        && resource.data.clinicId == myClinic()
+        && request.resource.data.clinicId == myClinic();
+    }
+
+    function canDelete() {
+      // A missing document may be deleted too, so batch deletes of optional docs don't fail.
+      return hasProfile() && isAdmin() && (resource == null || resource.data.clinicId == myClinic());
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      // Sign-up: an admin profile pointing at a clinic this user just created.
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(["email", "doctorName", "clinicId", "role"])
+        && request.resource.data.keys().hasAll(["email", "doctorName", "clinicId", "role"])
+        && request.resource.data.role == "admin"
+        && request.resource.data.clinicId is string
+        && get(/databases/$(database)/documents/clinics/$(request.resource.data.clinicId)).data.ownerUid == request.auth.uid;
+
+      // Users may rename themselves, or lock their own account as a read-only demo.
+      allow update: if signedIn() && request.auth.uid == uid && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["doctorName"])
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["role"])
+          && resource.data.role == "admin"
+          && request.resource.data.role == "demo"
+        )
+      );
+
+      allow delete: if false;
+    }
+
+    match /clinics/{clinicId} {
+      allow read: if hasProfile() && myClinic() == clinicId;
+
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(["name", "address", "ownerUid"]);
+
+      allow update: if hasProfile() && isAdmin() && myClinic() == clinicId
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.keys().hasOnly(["name", "address", "ownerUid"]);
+
+      allow delete: if false;
+    }
+
+    match /patients/{id} {
+      allow read: if canRead();
+      allow create: if canCreate();
+      allow update: if canUpdate();
+      allow delete: if canDelete();
+    }
+
+    match /cases/{id} {
+      allow read: if canRead();
+      allow create: if canCreate();
+      allow update: if canUpdate();
+      allow delete: if canDelete();
+    }
+
+    match /xrays/{id} {
+      allow read: if canRead();
+      allow create: if canCreate();
+      allow update: if canUpdate();
+      allow delete: if canDelete();
+    }
+  }
+}
