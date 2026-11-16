@@ -28,6 +28,15 @@ To try your own X-rays, register a clinic (free). Each clinic only ever sees its
 - **3D viewer**: rotate, pan and zoom `.stl` dental scans (a sample tooth is included).
 - **Privacy**: analytics only start after the visitor accepts the consent banner.
 
+## Model results
+
+Both models are Ultralytics YOLO11n networks trained on panoramic X-rays and exported to TensorFlow.js.
+
+| Model | Task | Result |
+| --- | --- | --- |
+| Pathology detection | Finds 14 kinds of pathologies and treatments (caries, implants, fillings, ...) | 98% mAP@50 |
+| Tooth segmentation | Outlines and numbers all 32 teeth (FDI) | 97.9% pixel accuracy |
+
 ## Tech stack
 
 | Area | Tools |
